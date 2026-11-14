@@ -6,6 +6,7 @@
       <button
         class="close-button"
         @click="$emit('close')"
+        aria-label="Close search"
       >
         <font-awesome-icon :icon="faTimes" />
       </button>
@@ -15,7 +16,13 @@
       <input
         ref="inputRef"
         v-model="searchQuery"
-        type="text"
+        type="search"
+        inputmode="search"
+        enterkeyhint="search"
+        autocomplete="off"
+        autocorrect="off"
+        autocapitalize="off"
+        spellcheck="false"
         class="search-input"
         placeholder="Search by title or author..."
       />
@@ -24,6 +31,7 @@
         v-if="searchQuery"
         class="clear-button"
         @click="clearSearch"
+        aria-label="Clear search"
       >
         <font-awesome-icon :icon="faTimes" />
       </button>
@@ -89,13 +97,20 @@ const filteredBooks = computed(() => {
   )
 })
 
+let previousOverflow = ""
+
 onMounted(() => {
   nextTick(() => inputRef.value?.focus())
   window.addEventListener("keydown", handleEsc)
+
+  // Lock background scroll while panel is open
+  previousOverflow = document.body.style.overflow
+  document.body.style.overflow = "hidden"
 })
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleEsc)
+  document.body.style.overflow = previousOverflow
 })
 
 function handleEsc(e) {
@@ -119,9 +134,10 @@ function clearSearch() {
   top: 100px;
   left: 50%;
   transform: translateX(-50%);
-  
-  width: 420px;
+
+  width: min(420px, calc(100vw - 32px));
   max-height: calc(100vh - 140px);
+  max-height: calc(100dvh - 140px);
 
   background: white;
   border-radius: 12px;
@@ -133,13 +149,14 @@ function clearSearch() {
   display: flex;
   flex-direction: column;
 
-  overflow-y: auto;
+  overflow: hidden;
 }
 
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .panel-title {
@@ -152,16 +169,26 @@ function clearSearch() {
   position: relative;
   width: 100%;
   margin-top: 15px;
+  flex-shrink: 0;
 }
 
 .search-input {
   width: 100%;
-  padding: 10px 40px 10px 12px;
+  padding: 12px 44px 12px 12px;
   border-radius: 6px;
   border: 1px solid #ddd;
-  font-size: 16px;
+  font-size: 16px; /* 16px+ prevents iOS auto-zoom on focus */
   outline: none;
   transition: border 0.2s ease;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Hide native search clear button (we have our own) */
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .search-input:focus {
@@ -170,7 +197,7 @@ function clearSearch() {
 
 .clear-button {
   position: absolute;
-  right: 10px;
+  right: 6px;
   top: 50%;
   font-size: 17px;
   transform: translateY(-50%);
@@ -183,8 +210,8 @@ function clearSearch() {
   align-items: center;
   justify-content: center;
 
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
 
   transition: all 0.2s ease;
@@ -195,18 +222,14 @@ function clearSearch() {
   transition: color 0.2s ease;
 }
 
-/* .clear-button:hover svg {
-  color: red; 
-} */
-
 .close-button {
   background: none;
   border: none;
   font-size: 20px;
   cursor: pointer;
 
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -220,24 +243,21 @@ function clearSearch() {
   transition: color 0.2s ease;
 }
 
-.close-button:hover {
-  background: rgba(192, 108, 132, 0.15);
-}
-
-.close-button:hover svg {
-  color: #C06C84;
-}
-
 .separator {
   width: 100%;
   height: 2px;
   background: #eee;
   margin: 15px 0;
+  flex-shrink: 0;
 }
 
 .results {
-  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
   max-height: 300px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding-right: 5px;
 }
 
@@ -256,9 +276,11 @@ function clearSearch() {
   font-weight: bold;
   color: black;
   cursor: pointer;
+  word-break: break-word;
+  transition: background 0.15s ease;
 }
 
-.results li:hover {
+.results li:active {
   background: #4e95be;
 }
 
@@ -270,6 +292,50 @@ function clearSearch() {
   color: teal;
   font-weight: bold;
   font-size: 16px;
+}
+
+/* Hover effects only on devices that actually hover */
+@media (hover: hover) {
+  .close-button:hover {
+    background: rgba(192, 108, 132, 0.15);
+  }
+
+  .close-button:hover svg {
+    color: #C06C84;
+  }
+
+  .results li:hover {
+    background: #4e95be;
+  }
+}
+
+/* Mobile: full-screen panel */
+@media (max-width: 600px) {
+  .search-panel {
+    top: 0;
+    left: 0;
+    transform: none;
+
+    width: 100%;
+    height: 100vh;
+    height: 100dvh;
+    max-height: none;
+
+    border-radius: 0;
+    padding: 16px;
+    padding-top: calc(16px + env(safe-area-inset-top));
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+
+    box-shadow: none;
+  }
+
+  .results {
+    max-height: none;
+  }
+
+  .results li {
+    padding: 14px;
+  }
 }
 
 </style>
