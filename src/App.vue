@@ -13,14 +13,23 @@ import NavBar from './components/NavBar.vue';
 
 
 <style>
+:root {
+  --nav-height: 80px;
+}
+
 * {
   padding: 0;
   margin: 0;
   box-sizing: border-box;
 }
 
-.main-view {
-	padding-top: 80px;
+html,
+body {
+  overflow-x: clip;
+  width: 100%;
 }
 
+.main-view {
+  padding-top: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
+}
 </style>
