@@ -109,8 +109,9 @@ watch(() => route.path, closeMenu)
 .navbar {
   background: #C06C84;
   width: 100%;
+  max-width: 100vw;
   position: fixed;
-  height: 80px;
+  height: var(--nav-height, 80px);
   top: 0;
   left: 0;
   z-index: 1000;
@@ -186,7 +187,7 @@ watch(() => route.path, closeMenu)
 /* Mobile dropdown */
 .mobile-menu {
   position: absolute;
-  top: 80px;
+  top: var(--nav-height, 80px);
   left: 0;
   width: 100%;
   background: #C06C84;
@@ -214,7 +215,7 @@ watch(() => route.path, closeMenu)
 
 .menu-backdrop {
   position: fixed;
-  inset: 80px 0 0 0;
+  inset: var(--nav-height, 80px) 0 0 0;
   background: rgba(0, 0, 0, 0.3);
   z-index: 999;
 }
