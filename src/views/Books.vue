@@ -47,6 +47,7 @@ const books = computed(() => result.value?.getAllBooks || []);
   display: flex;
   flex-direction: column;
   align-items: center;
+  padding: 0 16px;
 }
 
 .page-title {
@@ -63,7 +64,7 @@ const books = computed(() => result.value?.getAllBooks || []);
 .page-title::after {
   content: "";
   display: block;
-  width: 400px;
+  width: min(400px, 80vw);
   height: 4px;
   background-color: #ff6b6b;
   margin: 8px auto 0;
