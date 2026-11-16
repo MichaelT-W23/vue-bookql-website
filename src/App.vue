@@ -4,63 +4,54 @@
 	<div class="main-view">
 		<router-view />
 	</div>
-
-	<!-- TEMP DEBUG -->
-	<pre class="debug-box">{{ debug }}</pre>
 </template>
 
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { onMounted, onBeforeUnmount } from 'vue';
 import { useRouter } from 'vue-router';
 import NavBar from './components/NavBar.vue';
 
 const router = useRouter();
 
-// Force top on fresh load / refresh (beats iOS Safari's restore)
 const scrollTop = () => window.scrollTo(0, 0);
 
 if ('scrollRestoration' in window.history) {
 	window.history.scrollRestoration = 'manual';
 }
 
-// TEMP DEBUG
-const debug = ref('');
-let timer = null;
+// iOS pull-to-refresh leaves leftover momentum that carries the page
+// past 0 after reload. For the first 2s, if the user hasn't touched,
+// wait for scrolling to settle, then snap back to the top.
+let touched = false;
+let settleTimer = null;
+let guardActive = true;
 
-const scrollLog = [];
-let lastY = Math.round(window.scrollY);
-scrollLog.push(`${Math.round(performance.now())}ms start → ${lastY}`);
-
-const logScroll = () => {
-	const y = Math.round(window.scrollY);
-	if (y !== lastY && scrollLog.length < 10) {
-		scrollLog.push(`${Math.round(performance.now())}ms → ${y}`);
-		lastY = y;
-	}
+const onTouch = () => {
+	touched = true;
+	clearTimeout(settleTimer);
+	stopGuard();
 };
-window.addEventListener('scroll', logScroll, { passive: true });
 
-const update = () => {
-	const nav = document.querySelector('.navbar');
-	const main = document.querySelector('.main-view');
-	const title = document.querySelector('.page-title');
-	const vv = window.visualViewport;
-
-	debug.value = [
-		`restore: ${window.history.scrollRestoration}`,
-		`scrollY: ${Math.round(window.scrollY)}`,
-		`innerW x H: ${window.innerWidth} x ${window.innerHeight}`,
-		`nav height: ${nav?.offsetHeight}`,
-		`nav top: ${nav ? Math.round(nav.getBoundingClientRect().top) : '-'}`,
-		`main padTop: ${main ? getComputedStyle(main).paddingTop : '-'}`,
-		`title top: ${title ? Math.round(title.getBoundingClientRect().top) : '-'}`,
-		`vv offsetTop: ${vv ? Math.round(vv.offsetTop) : '-'}`,
-		`--nav-height: ${getComputedStyle(document.documentElement).getPropertyValue('--nav-height')}`,
-		'--- scroll log ---',
-		...scrollLog
-	].join('\n');
+const onGuardScroll = () => {
+	clearTimeout(settleTimer);
+	settleTimer = setTimeout(() => {
+		if (!touched && window.scrollY > 0) {
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+		}
+	}, 120);
 };
+
+const stopGuard = () => {
+	if (!guardActive) return;
+	guardActive = false;
+	window.removeEventListener('touchstart', onTouch);
+	window.removeEventListener('scroll', onGuardScroll);
+};
+
+window.addEventListener('touchstart', onTouch, { passive: true });
+window.addEventListener('scroll', onGuardScroll, { passive: true });
+const guardTimeout = setTimeout(stopGuard, 2000);
 
 const onPageShow = (e) => {
 	if (e.persisted) scrollTop();
@@ -69,27 +60,14 @@ const onPageShow = (e) => {
 onMounted(async () => {
 	await router.isReady();
 	scrollTop();
-
-	if (document.readyState === 'complete') {
-		requestAnimationFrame(scrollTop);
-	} else {
-		window.addEventListener('load', () => requestAnimationFrame(scrollTop), { once: true });
-	}
 	window.addEventListener('pageshow', onPageShow);
-
-	// TEMP DEBUG
-	update();
-	timer = setInterval(update, 250);
-	window.addEventListener('scroll', update, { passive: true });
 });
 
 onBeforeUnmount(() => {
+	clearTimeout(guardTimeout);
+	clearTimeout(settleTimer);
+	stopGuard();
 	window.removeEventListener('pageshow', onPageShow);
-
-	// TEMP DEBUG
-	clearInterval(timer);
-	window.removeEventListener('scroll', update);
-	window.removeEventListener('scroll', logScroll);
 });
 </script>
 
@@ -113,19 +91,5 @@ body {
 
 .main-view {
   padding-top: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
-}
-
-/* TEMP DEBUG */
-.debug-box {
-  position: fixed;
-  bottom: 10px;
-  left: 10px;
-  z-index: 99999;
-  background: rgba(0, 0, 0, 0.8);
-  color: #0f0;
-  font-size: 12px;
-  padding: 8px;
-  border-radius: 6px;
-  pointer-events: none;
 }
 </style>
