@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router';
+import { createRouter, createWebHistory, START_LOCATION } from 'vue-router';
 
 import Books from '../views/Books.vue';
 import Authors from '../views/Authors.vue';
@@ -29,10 +29,19 @@ const routes = [
 	}
 ]
 
+if ('scrollRestoration' in window.history) {
+	window.history.scrollRestoration = 'manual';
+}
+
 const router = createRouter({
 	history: createWebHistory(),
 	routes,
 	scrollBehavior(to, from, savedPosition) {
+		// Fresh load / refresh: always start at the top
+		if (from === START_LOCATION) {
+			return { top: 0 };
+		}
+		// Back/forward: restore position
 		return savedPosition || { top: 0 };
 	}
 });
