@@ -4,68 +4,92 @@
 	<div class="main-view">
 		<router-view />
 	</div>
+
+	<!-- TEMP DEBUG -->
+	<pre class="debug-box">{{ debug }}</pre>
 </template>
 
 
 <script setup>
-import { onMounted, onBeforeUnmount } from 'vue';
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 import NavBar from './components/NavBar.vue';
+
+const router = useRouter();
+
+// Force top on fresh load / refresh (beats iOS Safari's restore)
+const scrollTop = () => window.scrollTo(0, 0);
 
 if ('scrollRestoration' in window.history) {
 	window.history.scrollRestoration = 'manual';
 }
 
-// iOS can continue the pull-to-refresh bounce after the new page has loaded.
-// Wait for that motion to settle before correcting the root scroll position.
-const settleDelay = 180;
-const guardDuration = 5000;
-const scrollTolerance = 1;
-let guardActive = false;
-let settleTimer = null;
-let guardTimer = null;
+// TEMP DEBUG
+const debug = ref('');
+let timer = null;
 
-const stopGuard = () => {
-	if (!guardActive) return;
-	guardActive = false;
-	clearTimeout(settleTimer);
-	clearTimeout(guardTimer);
-	window.removeEventListener('scroll', scheduleCorrection);
-	window.removeEventListener('scrollend', scheduleCorrection);
-	window.removeEventListener('touchstart', stopGuard);
-	window.removeEventListener('pointerdown', stopGuard);
-	window.removeEventListener('wheel', stopGuard);
-	window.removeEventListener('keydown', stopGuard);
+const scrollLog = [];
+let lastY = Math.round(window.scrollY);
+scrollLog.push(`${Math.round(performance.now())}ms start → ${lastY}`);
+
+const logScroll = () => {
+	const y = Math.round(window.scrollY);
+	if (y !== lastY && scrollLog.length < 10) {
+		scrollLog.push(`${Math.round(performance.now())}ms → ${y}`);
+		lastY = y;
+	}
+};
+window.addEventListener('scroll', logScroll, { passive: true });
+
+const update = () => {
+	const nav = document.querySelector('.navbar');
+	const main = document.querySelector('.main-view');
+	const title = document.querySelector('.page-title');
+	const vv = window.visualViewport;
+
+	debug.value = [
+		`restore: ${window.history.scrollRestoration}`,
+		`scrollY: ${Math.round(window.scrollY)}`,
+		`innerW x H: ${window.innerWidth} x ${window.innerHeight}`,
+		`nav height: ${nav?.offsetHeight}`,
+		`nav top: ${nav ? Math.round(nav.getBoundingClientRect().top) : '-'}`,
+		`main padTop: ${main ? getComputedStyle(main).paddingTop : '-'}`,
+		`title top: ${title ? Math.round(title.getBoundingClientRect().top) : '-'}`,
+		`vv offsetTop: ${vv ? Math.round(vv.offsetTop) : '-'}`,
+		`--nav-height: ${getComputedStyle(document.documentElement).getPropertyValue('--nav-height')}`,
+		'--- scroll log ---',
+		...scrollLog
+	].join('\n');
 };
 
-const scheduleCorrection = () => {
-	if (!guardActive) return;
-	clearTimeout(settleTimer);
-	settleTimer = setTimeout(() => {
-		if (!guardActive) return;
-		if (Math.abs(window.scrollY) <= scrollTolerance) {
-			stopGuard();
-			return;
-		}
-
-		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
-		scheduleCorrection();
-	}, settleDelay);
+const onPageShow = (e) => {
+	if (e.persisted) scrollTop();
 };
 
-onMounted(() => {
-	guardActive = true;
-	window.addEventListener('scroll', scheduleCorrection, { passive: true });
-	window.addEventListener('scrollend', scheduleCorrection, { passive: true });
-	window.addEventListener('touchstart', stopGuard, { passive: true });
-	window.addEventListener('pointerdown', stopGuard, { passive: true });
-	window.addEventListener('wheel', stopGuard, { passive: true });
-	window.addEventListener('keydown', stopGuard);
-	guardTimer = setTimeout(stopGuard, guardDuration);
-	scheduleCorrection();
+onMounted(async () => {
+	await router.isReady();
+	scrollTop();
+
+	if (document.readyState === 'complete') {
+		requestAnimationFrame(scrollTop);
+	} else {
+		window.addEventListener('load', () => requestAnimationFrame(scrollTop), { once: true });
+	}
+	window.addEventListener('pageshow', onPageShow);
+
+	// TEMP DEBUG
+	update();
+	timer = setInterval(update, 250);
+	window.addEventListener('scroll', update, { passive: true });
 });
 
 onBeforeUnmount(() => {
-	stopGuard();
+	window.removeEventListener('pageshow', onPageShow);
+
+	// TEMP DEBUG
+	clearInterval(timer);
+	window.removeEventListener('scroll', update);
+	window.removeEventListener('scroll', logScroll);
 });
 </script>
 
@@ -89,5 +113,19 @@ body {
 
 .main-view {
   padding-top: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
+}
+
+/* TEMP DEBUG */
+.debug-box {
+  position: fixed;
+  bottom: 10px;
+  left: 10px;
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.8);
+  color: #0f0;
+  font-size: 12px;
+  padding: 8px;
+  border-radius: 6px;
+  pointer-events: none;
 }
 </style>
