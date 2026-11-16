@@ -28,6 +28,19 @@ if ('scrollRestoration' in window.history) {
 const debug = ref('');
 let timer = null;
 
+const scrollLog = [];
+let lastY = Math.round(window.scrollY);
+scrollLog.push(`${Math.round(performance.now())}ms start → ${lastY}`);
+
+const logScroll = () => {
+	const y = Math.round(window.scrollY);
+	if (y !== lastY && scrollLog.length < 10) {
+		scrollLog.push(`${Math.round(performance.now())}ms → ${y}`);
+		lastY = y;
+	}
+};
+window.addEventListener('scroll', logScroll, { passive: true });
+
 const update = () => {
 	const nav = document.querySelector('.navbar');
 	const main = document.querySelector('.main-view');
@@ -43,7 +56,9 @@ const update = () => {
 		`main padTop: ${main ? getComputedStyle(main).paddingTop : '-'}`,
 		`title top: ${title ? Math.round(title.getBoundingClientRect().top) : '-'}`,
 		`vv offsetTop: ${vv ? Math.round(vv.offsetTop) : '-'}`,
-		`--nav-height: ${getComputedStyle(document.documentElement).getPropertyValue('--nav-height')}`
+		`--nav-height: ${getComputedStyle(document.documentElement).getPropertyValue('--nav-height')}`,
+		'--- scroll log ---',
+		...scrollLog
 	].join('\n');
 };
 
@@ -74,6 +89,7 @@ onBeforeUnmount(() => {
 	// TEMP DEBUG
 	clearInterval(timer);
 	window.removeEventListener('scroll', update);
+	window.removeEventListener('scroll', logScroll);
 });
 </script>
 
