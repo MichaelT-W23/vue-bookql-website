@@ -42,24 +42,25 @@
     </transition>
   </nav>
 
-  <Teleport to="body">
-    <div
-      v-if="menuOpen"
-      class="menu-backdrop"
-      @click="closeMenu"
-    ></div>
+  <!-- Mobile menu backdrop -->
+  <div
+    v-if="menuOpen"
+    class="menu-backdrop"
+    @click="closeMenu"
+  ></div>
 
-    <div
-      v-if="showSearch"
-      class="overlay"
-      @click="closeSearch"
-    ></div>
+  <!-- Overlay -->
+  <div
+    v-if="showSearch"
+    class="overlay"
+    @click="closeSearch"
+  ></div>
 
-    <NewSearchModal
-      v-if="showSearch"
-      @close="closeSearch"
-    />
-  </Teleport>
+  <!-- Side View -->
+  <NewSearchModal
+    v-if="showSearch"
+    @close="closeSearch"
+  />
 </template>
 
 <script setup>
@@ -108,9 +109,11 @@ watch(() => route.path, closeMenu)
 .navbar {
   background: #C06C84;
   width: 100%;
-  position: sticky;
-  top: 0;
+  max-width: 100vw;
+  position: fixed;
   height: var(--nav-height, 80px);
+  top: 0;
+  left: 0;
   z-index: 1000;
   display: flex;
   justify-content: space-between;
