@@ -42,25 +42,24 @@
     </transition>
   </nav>
 
-  <!-- Mobile menu backdrop -->
-  <div
-    v-if="menuOpen"
-    class="menu-backdrop"
-    @click="closeMenu"
-  ></div>
+  <Teleport to="body">
+    <div
+      v-if="menuOpen"
+      class="menu-backdrop"
+      @click="closeMenu"
+    ></div>
 
-  <!-- Overlay -->
-  <div
-    v-if="showSearch"
-    class="overlay"
-    @click="closeSearch"
-  ></div>
+    <div
+      v-if="showSearch"
+      class="overlay"
+      @click="closeSearch"
+    ></div>
 
-  <!-- Side View -->
-  <NewSearchModal
-    v-if="showSearch"
-    @close="closeSearch"
-  />
+    <NewSearchModal
+      v-if="showSearch"
+      @close="closeSearch"
+    />
+  </Teleport>
 </template>
 
 <script setup>

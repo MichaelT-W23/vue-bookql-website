@@ -29,6 +29,8 @@ const routes = [
 	}
 ]
 
+const appScrollPositions = new Map();
+
 if ('scrollRestoration' in window.history) {
 	window.history.scrollRestoration = 'manual';
 }
@@ -37,6 +39,17 @@ const router = createRouter({
 	history: createWebHistory(),
 	routes,
 	scrollBehavior(to, from, savedPosition) {
+		const appScroller = document.querySelector('.app-shell--gsa');
+		if (appScroller) {
+			if (from !== START_LOCATION) {
+				appScrollPositions.set(from.fullPath, appScroller.scrollTop);
+			}
+
+			const top = appScrollPositions.get(to.fullPath) ?? savedPosition?.top ?? 0;
+			appScroller.scrollTop = top;
+			return false;
+		}
+
 		// Fresh load / refresh: always start at the top
 		if (from === START_LOCATION) {
 			return { top: 0 };
