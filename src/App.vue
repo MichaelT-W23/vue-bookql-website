@@ -12,8 +12,19 @@
 
 <script setup>
 import { ref, onMounted, onBeforeUnmount } from 'vue';
+import { useRouter } from 'vue-router';
 import NavBar from './components/NavBar.vue';
 
+const router = useRouter();
+
+// Force top on fresh load / refresh (beats iOS Safari's restore)
+const scrollTop = () => window.scrollTo(0, 0);
+
+if ('scrollRestoration' in window.history) {
+	window.history.scrollRestoration = 'manual';
+}
+
+// TEMP DEBUG
 const debug = ref('');
 let timer = null;
 
@@ -24,6 +35,7 @@ const update = () => {
 	const vv = window.visualViewport;
 
 	debug.value = [
+		`restore: ${window.history.scrollRestoration}`,
 		`scrollY: ${Math.round(window.scrollY)}`,
 		`innerW x H: ${window.innerWidth} x ${window.innerHeight}`,
 		`nav height: ${nav?.offsetHeight}`,
@@ -35,13 +47,31 @@ const update = () => {
 	].join('\n');
 };
 
-onMounted(() => {
+const onPageShow = (e) => {
+	if (e.persisted) scrollTop();
+};
+
+onMounted(async () => {
+	await router.isReady();
+	scrollTop();
+
+	if (document.readyState === 'complete') {
+		requestAnimationFrame(scrollTop);
+	} else {
+		window.addEventListener('load', () => requestAnimationFrame(scrollTop), { once: true });
+	}
+	window.addEventListener('pageshow', onPageShow);
+
+	// TEMP DEBUG
 	update();
 	timer = setInterval(update, 250);
 	window.addEventListener('scroll', update, { passive: true });
 });
 
 onBeforeUnmount(() => {
+	window.removeEventListener('pageshow', onPageShow);
+
+	// TEMP DEBUG
 	clearInterval(timer);
 	window.removeEventListener('scroll', update);
 });
