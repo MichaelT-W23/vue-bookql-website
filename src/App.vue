@@ -9,65 +9,63 @@
 
 <script setup>
 import { onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
 import NavBar from './components/NavBar.vue';
-
-const router = useRouter();
-
-const scrollTop = () => window.scrollTo(0, 0);
 
 if ('scrollRestoration' in window.history) {
 	window.history.scrollRestoration = 'manual';
 }
 
-// iOS pull-to-refresh leaves leftover momentum that carries the page
-// past 0 after reload. For the first 2s, if the user hasn't touched,
-// wait for scrolling to settle, then snap back to the top.
-let touched = false;
+// iOS can continue the pull-to-refresh bounce after the new page has loaded.
+// Wait for that motion to settle before correcting the root scroll position.
+const settleDelay = 180;
+const guardDuration = 5000;
+const scrollTolerance = 1;
+let guardActive = false;
 let settleTimer = null;
-let guardActive = true;
-
-const onTouch = () => {
-	touched = true;
-	clearTimeout(settleTimer);
-	stopGuard();
-};
-
-const onGuardScroll = () => {
-	clearTimeout(settleTimer);
-	settleTimer = setTimeout(() => {
-		if (!touched && window.scrollY > 0) {
-			window.scrollTo({ top: 0, behavior: 'smooth' });
-		}
-	}, 120);
-};
+let guardTimer = null;
 
 const stopGuard = () => {
 	if (!guardActive) return;
 	guardActive = false;
-	window.removeEventListener('touchstart', onTouch);
-	window.removeEventListener('scroll', onGuardScroll);
+	clearTimeout(settleTimer);
+	clearTimeout(guardTimer);
+	window.removeEventListener('scroll', scheduleCorrection);
+	window.removeEventListener('scrollend', scheduleCorrection);
+	window.removeEventListener('touchstart', stopGuard);
+	window.removeEventListener('pointerdown', stopGuard);
+	window.removeEventListener('wheel', stopGuard);
+	window.removeEventListener('keydown', stopGuard);
 };
 
-window.addEventListener('touchstart', onTouch, { passive: true });
-window.addEventListener('scroll', onGuardScroll, { passive: true });
-const guardTimeout = setTimeout(stopGuard, 2000);
+const scheduleCorrection = () => {
+	if (!guardActive) return;
+	clearTimeout(settleTimer);
+	settleTimer = setTimeout(() => {
+		if (!guardActive) return;
+		if (Math.abs(window.scrollY) <= scrollTolerance) {
+			stopGuard();
+			return;
+		}
 
-const onPageShow = (e) => {
-	if (e.persisted) scrollTop();
+		window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+		scheduleCorrection();
+	}, settleDelay);
 };
 
-onMounted(async () => {
-	await router.isReady();
-	scrollTop();
-	window.addEventListener('pageshow', onPageShow);
+onMounted(() => {
+	guardActive = true;
+	window.addEventListener('scroll', scheduleCorrection, { passive: true });
+	window.addEventListener('scrollend', scheduleCorrection, { passive: true });
+	window.addEventListener('touchstart', stopGuard, { passive: true });
+	window.addEventListener('pointerdown', stopGuard, { passive: true });
+	window.addEventListener('wheel', stopGuard, { passive: true });
+	window.addEventListener('keydown', stopGuard);
+	guardTimer = setTimeout(stopGuard, guardDuration);
+	scheduleCorrection();
 });
 
 onBeforeUnmount(() => {
-	clearTimeout(guardTimeout);
-	clearTimeout(settleTimer);
 	stopGuard();
-	window.removeEventListener('pageshow', onPageShow);
 });
 </script>
 
