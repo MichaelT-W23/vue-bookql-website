@@ -30,6 +30,7 @@ body {
 }
 
 .main-view {
-  padding-top: calc(var(--nav-height) + env(safe-area-inset-top, 0px));
+  /* padding-top: calc(var(--nav-height) + env(safe-area-inset-top, 0px)); */
+  padding-top: 80px;
 }
 </style>
