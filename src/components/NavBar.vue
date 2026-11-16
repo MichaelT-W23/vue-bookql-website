@@ -109,11 +109,9 @@ watch(() => route.path, closeMenu)
 .navbar {
   background: #C06C84;
   width: 100%;
-  max-width: 100vw;
-  position: fixed;
-  height: var(--nav-height, 80px);
+  position: sticky;
   top: 0;
-  left: 0;
+  height: var(--nav-height, 80px);
   z-index: 1000;
   display: flex;
   justify-content: space-between;
