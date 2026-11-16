@@ -121,7 +121,7 @@ body {
   bottom: 10px;
   left: 10px;
   z-index: 99999;
-  background: rgba(0, 0, 0, 0.8);
+  background: black;
   color: #0f0;
   font-size: 12px;
   padding: 8px;
